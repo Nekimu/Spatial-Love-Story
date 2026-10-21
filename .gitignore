@@ -1,0 +1,13 @@
+# Variables de entorno privadas (API Keys y enlaces privados)
+.env
+.env.local
+.env.*.local
+
+# Configuraciones de entorno local
+.claude/
+.vscode/
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini

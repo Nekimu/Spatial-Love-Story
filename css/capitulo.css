@@ -1,0 +1,139 @@
+/* =====================================================================
+   css/capitulo.css · Storytelling por capítulo adaptado con fechas,
+   hitos de aniversario (14 Mar / 27 de cada mes) y carrusel 3D
+   ===================================================================== */
+.portada {
+  position: relative;
+  min-height: clamp(520px, 78vh, 880px);
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--tono, #120f14);
+}
+.portada > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+}
+.portada::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(7, 7, 10, .18) 0%, rgba(7, 7, 10, 0) 30%, color-mix(in srgb, var(--fondo) 72%, transparent) 72%, var(--fondo) 100%);
+}
+.portada-txt {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  display: grid;
+  gap: 16px;
+  padding-block: clamp(40px, 8vh, 96px) clamp(32px, 6vh, 64px);
+}
+.portada .display { font-size: clamp(56px, 9vw, 128px); line-height: .92; }
+.portada .entrada { color: #ddd5d8; }
+.datos { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--tenue); letter-spacing: .04em; }
+.datos b { color: var(--tinta); font-weight: 500; }
+
+/* Franja de contexto temporal e hitos del capítulo */
+.franja-hito {
+  max-width: 1180px;
+  margin: 12px auto 0;
+  padding: 18px 24px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--linea);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.franja-hito-izq {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--tinta);
+}
+.franja-punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--acento);
+  box-shadow: 0 0 12px var(--acento);
+  flex: none;
+}
+.franja-hito-der {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+.chip-fecha {
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--linea);
+}
+.chip-fecha b { color: var(--tinta); font-weight: 600; }
+
+/* Episodios */
+.episodios {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-block: clamp(32px, 6vh, 72px) 0;
+  display: grid;
+  gap: clamp(64px, 14vh, 160px);
+}
+.episodio {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+  content-visibility: auto;
+  contain-intrinsic-height: auto 820px;
+}
+@media (min-width: 900px) {
+  .episodio { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(32px, 5vw, 80px); }
+  .episodio:nth-child(even) .ep-texto { order: 2; }
+}
+.ep-texto { display: grid; gap: 14px; align-content: center; min-width: 0; }
+.ep-n { display: flex; align-items: center; gap: 12px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--tenue); }
+.ep-n b { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 30px; letter-spacing: 0; text-transform: none; line-height: 1; color: var(--tinta); }
+.ep-n::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--acento), transparent); }
+.ep-titulo { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: clamp(40px, 4.4vw, 60px); line-height: 1; letter-spacing: -.01em; text-wrap: balance; }
+.ep-titulo em {
+  font-style: italic;
+  background: linear-gradient(100deg, var(--acento), var(--acento-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-right: .04em;
+}
+.ep-lugar { margin: 0; font-size: 14px; color: var(--tenue); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.ep-lugar span + span::before { content: "·"; margin-right: 14px; color: var(--mas-tenue); }
+.ep-badge-dia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--tinta);
+  background: color-mix(in srgb, var(--acento) 18%, rgba(255, 255, 255, .04));
+  border: 1px solid color-mix(in srgb, var(--acento) 42%, transparent);
+}
+.ep-cuerpo { margin: 0; font-size: 17px; line-height: 1.65; color: #d7d0d4; max-width: 46ch; text-wrap: pretty; }
+.ep-fotos { min-width: 0; }
+@media (max-width: 899.98px) {
+  .ep-fotos { margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); }
+}
