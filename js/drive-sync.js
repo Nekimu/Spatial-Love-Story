@@ -5,13 +5,18 @@
    Frontend (alojado en Google AI Studio / Cloud Run / servidor web).
 
    Características:
-   1. Lee `googleDrive` desde `historia.yaml` (o desde la configuración de
-      prueba en el navegador para previsualizar al instante).
-   2. Soporta una sola `carpetaRaizId` (con subcarpetas `epilogo`, `capitulo-1`..`capitulo-N`)
+   1. Lee variables de entorno desde `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_PROJECT_ID`,
+      `GOOGLE_CLIENT_SECRET`, `GOOGLE_DRIVE_API_KEY`, `GOOGLE_DRIVE_FOLDER_URL`),
+      `historia.yaml` o `localStorage`.
+   2. Soporta dos métodos de autenticación con Google Drive API v3:
+      - OAuth 2.0 (`GOOGLE_CLIENT_ID` del JSON de credenciales web) mediante
+        Google Identity Services (`Bearer` token, funciona con carpetas privadas o compartidas).
+      - API Key (`GOOGLE_DRIVE_API_KEY`) para lectura pública directa sin login.
+   3. Soporta una sola `carpetaRaizId` (con subcarpetas `epilogo`, `capitulo-1`..`capitulo-N`)
       o IDs individuales en `carpetasPorCapitulo`.
-   3. Si creas una carpeta `capitulo-5 - Título` en Drive, crea automáticamente
+   4. Si creas una carpeta `capitulo-5 - Título` en Drive, crea automáticamente
       el Capítulo V en toda la web (barra, portada 2.0, capítulo 1.0 y mural).
-   4. Extrae automáticamente de cada foto en Drive:
+   5. Extrae automáticamente de cada foto en Drive:
       - Fecha de captura EXIF (`imageMediaMetadata.time`) -> calcula día de novios
       - Descripción de Drive o nombre del archivo -> pie de foto (`pie`)
       - Dimensiones reales -> relación de aspecto (`aspect`)
@@ -23,6 +28,8 @@
 
   const STORAGE_CFG_KEY = 'unibody_drive_config_v1';
   const STORAGE_CACHE_KEY = 'unibody_drive_cache_v1';
+  const STORAGE_TOKEN_KEY = 'unibody_drive_oauth_token_v1';
+  const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 
   const PALETAS_DINAMICAS = [
     { fondo: '#08070c', acento: '#f43f5e', acento2: '#f59e0b', resplandor: 'rgba(244, 63, 94, 0.25)', resplandor2: 'rgba(245, 158, 11, 0.18)', velo: 'rgba(244, 63, 94, 0.08)' },
@@ -73,11 +80,9 @@
   function limpiarNombreArchivo(name, fallbackPie) {
     const sinExt = String(name || '').replace(/\.[a-zA-Z0-9]+$/, '').trim();
     if (!sinExt) return fallbackPie || 'Recuerdo';
-    /* Ignorar nombres automáticos de cámara o WhatsApp */
     if (/^(IMG|DSC|PXL|DCIM|Screenshot|WhatsApp|Photo|Signal|VID|MVIMG|e\d+-\d+|portada|maestra)[_\-\s\d]*$/i.test(sinExt)) {
       return fallbackPie || 'Un momento juntos';
     }
-    /* Quitar prefijos de orden tipo "01 - " o "02_" */
     const limpio = sinExt.replace(/^\d+[\s._\-]+/, '').replace(/[_]+/g, ' ').trim();
     return limpio || fallbackPie || 'Un momento juntos';
   }
@@ -92,8 +97,82 @@
     return '4/5';
   }
 
+  /* ---------- Gestión de Token OAuth 2.0 (Google Identity Services) ---------- */
+  function obtenerTokenOAuthValido() {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_TOKEN_KEY);
+      if (!raw) return '';
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.accessToken && parsed.expiresAt > Date.now() + 15000) {
+        return parsed.accessToken;
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  function guardarTokenOAuth(accessToken, expiresInSec) {
+    try {
+      const ttl = (Number(expiresInSec) || 3500) * 1000;
+      sessionStorage.setItem(STORAGE_TOKEN_KEY, JSON.stringify({
+        accessToken,
+        expiresAt: Date.now() + ttl
+      }));
+    } catch (_) {}
+  }
+
+  function cargarScriptGsi() {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.google && window.google.accounts && window.google.accounts.oauth2) {
+        resolve();
+        return;
+      }
+      const existente = document.querySelector('script[data-gsi-client]');
+      if (existente) {
+        existente.addEventListener('load', () => resolve(), { once: true });
+        existente.addEventListener('error', () => reject(new Error('No se pudo cargar Google Identity Services')), { once: true });
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.defer = true;
+      s.dataset.gsiClient = '1';
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('No se pudo cargar Google Identity Services'));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function solicitarTokenOAuthInteractivo(clientIdOverride) {
+    const cfg = obtenerConfiguracionActiva();
+    const clientId = (clientIdOverride || cfg.clientId || '').trim();
+    if (!clientId) {
+      throw new Error('Falta GOOGLE_CLIENT_ID en .env o en la configuración.');
+    }
+    await cargarScriptGsi();
+    return new Promise((resolve, reject) => {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: DRIVE_SCOPE,
+        callback: (resp) => {
+          if (resp && resp.error) {
+            reject(new Error(resp.error_description || resp.error));
+            return;
+          }
+          if (resp && resp.access_token) {
+            guardarTokenOAuth(resp.access_token, resp.expires_in);
+            resolve(resp.access_token);
+          } else {
+            reject(new Error('No se recibió access_token de Google OAuth.'));
+          }
+        }
+      });
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    });
+  }
+
   /* Construye el objeto de foto compatible con Unibody y Gemini 2.0 */
-  function construirFotoDrive(file, apiKey, idx, contextoPie) {
+  function construirFotoDrive(file, cfg, idx, contextoPie) {
     const id = `drive-${file.id}`;
     const meta = file.imageMediaMetadata || {};
     const fechaIso = normalizarFechaDrive(meta.time, file.createdTime);
@@ -109,7 +188,8 @@
 
     const miniUrl = `${thumbBase}=s540`;
     const fullUrl = `${thumbBase}=s1600`;
-    const mediaApiUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media&key=${encodeURIComponent(apiKey)}`;
+    const apiKeyParam = cfg && cfg.apiKey ? `&key=${encodeURIComponent(cfg.apiKey)}` : '';
+    const mediaApiUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media${apiKeyParam}`;
 
     return {
       id,
@@ -131,7 +211,6 @@
       const img = e.target;
       if (!img || img.tagName !== 'IMG') return;
       const srcActual = img.getAttribute('src') || '';
-      /* Si falla una URL de lh3.googleusercontent.com con ID de Drive, cambiar al endpoint alt=media */
       const cfg = obtenerConfiguracionActiva();
       if (!cfg.apiKey) return;
       const m = srcActual.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
@@ -143,15 +222,25 @@
     }, true);
   }
 
-  /* ---------- Llamadas a Google Drive API v3 ---------- */
-  async function listarArchivosCarpeta(folderId, apiKey) {
+  /* ---------- Llamadas a Google Drive API v3 (API Key o Bearer Token OAuth 2.0) ---------- */
+  async function listarArchivosCarpeta(folderId, cfg) {
     const cleanId = extraerDriveId(folderId);
-    if (!cleanId || !apiKey) return [];
+    if (!cleanId) return [];
+    const accessToken = (cfg && cfg.accessToken) || obtenerTokenOAuthValido();
+    const apiKey = (cfg && cfg.apiKey) || '';
+    if (!accessToken && !apiKey) return [];
+
     const q = encodeURIComponent(`'${cleanId}' in parents and trashed = false`);
     const fields = encodeURIComponent('files(id,name,mimeType,description,createdTime,imageMediaMetadata(time,width,height),thumbnailLink)');
-    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&orderBy=name,createdTime&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true&key=${encodeURIComponent(apiKey)}`;
+    const keyQuery = (!accessToken && apiKey) ? `&key=${encodeURIComponent(apiKey)}` : '';
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&orderBy=name,createdTime&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true${keyQuery}`;
 
-    const res = await fetch(url);
+    const fetchOpts = {};
+    if (accessToken) {
+      fetchOpts.headers = { Authorization: `Bearer ${accessToken}` };
+    }
+
+    const res = await fetch(url, fetchOpts);
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
       try {
@@ -173,8 +262,8 @@
   }
 
   /* Lee una carpeta de capítulo en Drive (puede contener fotos sueltas y/o subcarpetas de episodios) */
-  async function leerCarpetaCapituloDrive(folderId, apiKey, tituloCapitulo) {
-    const items = await listarArchivosCarpeta(folderId, apiKey);
+  async function leerCarpetaCapituloDrive(folderId, cfg, tituloCapitulo) {
+    const items = await listarArchivosCarpeta(folderId, cfg);
     const subcarpetas = items.filter(esCarpeta);
     const imagenesDirectas = items.filter(esImagen);
 
@@ -182,7 +271,7 @@
     const fotosSueltas = [];
 
     imagenesDirectas.forEach((f, idx) => {
-      const fotoObj = construirFotoDrive(f, apiKey, idx, tituloCapitulo);
+      const fotoObj = construirFotoDrive(f, cfg, idx, tituloCapitulo);
       if (!fotoPortada && /^(00[-_\s]*)?portada/i.test(f.name || '')) {
         fotoPortada = fotoObj;
       } else {
@@ -190,16 +279,15 @@
       }
     });
 
-    /* Si hay subcarpetas dentro del capítulo, cada subcarpeta es un episodio */
     const episodiosDrive = [];
     for (let i = 0; i < subcarpetas.length; i++) {
       const sub = subcarpetas[i];
-      const subItems = await listarArchivosCarpeta(sub.id, apiKey);
+      const subItems = await listarArchivosCarpeta(sub.id, cfg);
       const subImgs = subItems.filter(esImagen);
       if (!subImgs.length) continue;
 
       const tituloEp = limpiarNombreArchivo(sub.name, `Episodio ${i + 1}`);
-      const fotosEp = subImgs.map((imgFile, k) => construirFotoDrive(imgFile, apiKey, k, tituloEp));
+      const fotosEp = subImgs.map((imgFile, k) => construirFotoDrive(imgFile, cfg, k, tituloEp));
       const primeraConFecha = fotosEp.find(x => x.fecha);
 
       episodiosDrive.push({
@@ -316,6 +404,17 @@
       ''
     ).trim();
 
+    const envClientId = (
+      envVariables.GOOGLE_CLIENT_ID ||
+      envVariables.VITE_GOOGLE_CLIENT_ID ||
+      ''
+    ).trim();
+
+    const envProjectId = (envVariables.GOOGLE_PROJECT_ID || '').trim();
+    const envClientSecret = (envVariables.GOOGLE_CLIENT_SECRET || '').trim();
+    const envAuthUri = (envVariables.GOOGLE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth').trim();
+    const envTokenUri = (envVariables.GOOGLE_TOKEN_URI || 'https://oauth2.googleapis.com/token').trim();
+
     const envRoot = (
       envVariables.GOOGLE_DRIVE_FOLDER_URL ||
       envVariables.GOOGLE_DRIVE_FOLDER_ID ||
@@ -329,23 +428,37 @@
     const carpetasYaml = yamlCfg.carpetasPorCapitulo || {};
     const carpetasEnv = extraerCarpetasDeEnv(envVariables);
     const carpetasLocal = localCfg.carpetasPorCapitulo || {};
+    const accessToken = obtenerTokenOAuthValido();
 
     return {
       activo: localCfg.activo ?? yamlCfg.activo ?? true,
       apiKey: (localCfg.apiKey || envKey || yamlCfg.apiKey || '').trim(),
+      clientId: (localCfg.clientId || envClientId || yamlCfg.clientId || '').trim(),
+      projectId: envProjectId,
+      clientSecret: envClientSecret,
+      authUri: envAuthUri,
+      tokenUri: envTokenUri,
+      accessToken,
       carpetaRaizId: extraerDriveId(localCfg.carpetaRaizId || envRoot || yamlCfg.carpetaRaizId || ''),
       modo: localCfg.modo || envMode || yamlCfg.modo || 'reemplazar',
       cacheMinutos: Number(envCache !== undefined && envCache !== '' ? envCache : (yamlCfg.cacheMinutos ?? 5)),
       carpetasPorCapitulo: Object.assign({}, carpetasYaml, carpetasEnv, carpetasLocal),
-      origenEnv: Boolean(envKey || envRoot || Object.keys(carpetasEnv).length)
+      origenEnv: Boolean(envKey || envClientId || envRoot || Object.keys(carpetasEnv).length)
     };
   }
 
-  function tieneConfiguracionDrive(cfg) {
-    if (!cfg || !cfg.activo || !cfg.apiKey) return false;
+  function tieneCarpetaConfigurada(cfg) {
+    if (!cfg) return false;
     if (cfg.carpetaRaizId) return true;
     const map = cfg.carpetasPorCapitulo || {};
     return Object.values(map).some(v => Boolean(extraerDriveId(v)));
+  }
+
+  function tieneConfiguracionDrive(cfg) {
+    if (!cfg || !cfg.activo) return false;
+    const tieneCredencialActiva = Boolean(cfg.apiKey || cfg.accessToken);
+    if (!tieneCredencialActiva) return false;
+    return tieneCarpetaConfigurada(cfg);
   }
 
   /* ---------- Fusión de datos de Google Drive dentro de window.HISTORIA ---------- */
@@ -373,7 +486,6 @@
       if (!datosCap) continue;
       let cap = mapaCaps.get(capId);
 
-      /* Si el capítulo no existía en historia.yaml (ej. cap-5 creado en Drive), lo creamos */
       if (!cap) {
         const num = datosCap.numero || (H.capitulos.length + 1);
         const rom = aRomano(num);
@@ -423,7 +535,6 @@
           cap.episodios = nuevosEps;
         }
       } else {
-        /* Modo híbrido: conserva los episodios de historia.yaml e inyecta las fotos y subcarpetas de Drive */
         if (datosCap.episodiosDrive && datosCap.episodiosDrive.length) {
           datosCap.episodiosDrive.forEach((epD, idx) => {
             if (cap.episodios[idx]) {
@@ -447,7 +558,6 @@
               fotos: datosCap.fotosSueltas
             });
           } else {
-            /* Agregar fotos sueltas al último episodio del capítulo (o crear uno si tiene más de 10 fotos) */
             const ultimoEp = cap.episodios[cap.episodios.length - 1];
             const idsExistentes = new Set((ultimoEp.fotos || []).map(f => f.id));
             const nuevas = datosCap.fotosSueltas.filter(f => !idsExistentes.has(f.id));
@@ -460,10 +570,8 @@
         (datosCap.episodiosDrive ? datosCap.episodiosDrive.reduce((acc, e) => acc + e.fotos.length, 0) : 0);
     }
 
-    /* Ordenar capítulos por número */
     H.capitulos.sort((a, b) => (Number(a.numero) || 99) - (Number(b.numero) || 99));
 
-    /* Reinicializar globales y notificar a toda la interfaz */
     if (window.DatosAmor && window.DatosAmor.reinicializar) {
       window.DatosAmor.reinicializar(H);
     }
@@ -481,11 +589,19 @@
   async function sincronizarDesdeDrive(forzarSinCache) {
     const cfg = obtenerConfiguracionActiva();
     if (!tieneConfiguracionDrive(cfg)) {
-      estadoSync = {
-        estado: 'inactivo',
-        mensaje: 'Modo local activo · Agrega tu API Key y Folder ID de Google Drive para sincronizar fotos en vivo.',
-        fotosSincronizadas: 0
-      };
+      if (cfg.clientId && !cfg.apiKey && !cfg.accessToken) {
+        estadoSync = {
+          estado: 'inactivo',
+          mensaje: `OAuth 2.0 detectado en .env (${cfg.projectId || 'Google Cloud'}). Falta definir GOOGLE_DRIVE_FOLDER_URL y autorizar acceso, o agregar GOOGLE_DRIVE_API_KEY.`,
+          fotosSincronizadas: 0
+        };
+      } else {
+        estadoSync = {
+          estado: 'inactivo',
+          mensaje: 'Modo local activo · Agrega GOOGLE_DRIVE_FOLDER_URL en .env y usa tu API Key o el botón de OAuth 2.0.',
+          fotosSincronizadas: 0
+        };
+      }
       actualizarInsigniaDriveUI();
       return null;
     }
@@ -523,7 +639,7 @@
 
       /* 1. Si hay carpetaRaizId, descubrir subcarpetas automáticamente */
       if (cfg.carpetaRaizId) {
-        const raizItems = await listarArchivosCarpeta(cfg.carpetaRaizId, cfg.apiKey);
+        const raizItems = await listarArchivosCarpeta(cfg.carpetaRaizId, cfg);
         const subcarpetas = raizItems.filter(esCarpeta);
         const imagenesEnRaiz = raizItems.filter(esImagen);
 
@@ -531,9 +647,9 @@
           const info = identificarSubcarpetaCapitulo(sub.name);
           if (!info) continue;
           if (info.tipo === 'epilogo') {
-            paquete.epilogo = await leerCarpetaCapituloDrive(sub.id, cfg.apiKey, 'El Origen');
+            paquete.epilogo = await leerCarpetaCapituloDrive(sub.id, cfg, 'El Origen');
           } else if (info.tipo === 'capitulo') {
-            const datosCap = await leerCarpetaCapituloDrive(sub.id, cfg.apiKey, info.tituloExtra || `Capítulo ${aRomano(info.numero)}`);
+            const datosCap = await leerCarpetaCapituloDrive(sub.id, cfg, info.tituloExtra || `Capítulo ${aRomano(info.numero)}`);
             datosCap.numero = info.numero;
             datosCap.tituloExtra = info.tituloExtra;
             datosCap.descripcionCarpeta = sub.description || '';
@@ -541,11 +657,10 @@
           }
         }
 
-        /* Si el usuario subió fotos directamente en la carpeta raíz sin subcarpetas, agregarlas a cap-1 */
         if (!subcarpetas.length && imagenesEnRaiz.length) {
           paquete.capitulos['cap-1'] = {
-            portada: construirFotoDrive(imagenesEnRaiz[0], cfg.apiKey, 0, 'Capítulo I'),
-            fotosSueltas: imagenesEnRaiz.map((f, idx) => construirFotoDrive(f, cfg.apiKey, idx, 'Capítulo I')),
+            portada: construirFotoDrive(imagenesEnRaiz[0], cfg, 0, 'Capítulo I'),
+            fotosSueltas: imagenesEnRaiz.map((f, idx) => construirFotoDrive(f, cfg, idx, 'Capítulo I')),
             episodiosDrive: []
           };
         }
@@ -557,11 +672,11 @@
         const folderId = extraerDriveId(valorId);
         if (!folderId) continue;
         if (clave === 'epilogo') {
-          paquete.epilogo = await leerCarpetaCapituloDrive(folderId, cfg.apiKey, 'El Origen');
+          paquete.epilogo = await leerCarpetaCapituloDrive(folderId, cfg, 'El Origen');
         } else {
           const mNum = clave.match(/(\d+)/);
           const num = mNum ? Number(mNum[1]) : 1;
-          const datosCap = await leerCarpetaCapituloDrive(folderId, cfg.apiKey, `Capítulo ${aRomano(num)}`);
+          const datosCap = await leerCarpetaCapituloDrive(folderId, cfg, `Capítulo ${aRomano(num)}`);
           datosCap.numero = num;
           paquete.capitulos[clave] = datosCap;
         }
@@ -596,7 +711,6 @@
 
   /* ========================================================================
      Asistente Visual de Configuración y Estado de Google Drive (Modal ligero)
-     Permite probar el API Key y Carpeta de Drive en vivo en Google AI Studio
      ======================================================================== */
   let modalDriveEl = null;
 
@@ -625,7 +739,7 @@
       .drive-pill-btn[data-status="sincronizando"] .drive-dot { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
       .drive-pill-btn[data-status="error"] .drive-dot { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
       .drive-modal {
-        max-width: 560px;
+        max-width: 580px;
         width: calc(100% - 32px);
         border-radius: 24px;
         background: #0d0e17;
@@ -657,7 +771,16 @@
         border: 1px solid rgba(255,255,255,.09);
         font-size: 12.5px;
         color: #e2e8f0;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
+      }
+      .drive-env-badge {
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        font-size: 12px;
+        color: #bae6fd;
+        margin-bottom: 14px;
       }
       .drive-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 16px; }
       .drive-btn {
@@ -669,6 +792,11 @@
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;
+      }
+      .drive-btn.oauth {
+        background: rgba(56, 189, 248, 0.16);
+        border-color: rgba(56, 189, 248, 0.4);
+        color: #e0f2fe;
       }
       .drive-btn.primario {
         background: linear-gradient(100deg, #3b82f6, #ec4899);
@@ -709,31 +837,37 @@
       modalDriveEl.innerHTML = `
         <h3>☁ Conexión Dinámica con Google Drive API</h3>
         <p class="sub">
-          Sube tus fotografías a una carpeta de Google Drive compartida como <strong>«Cualquier persona con el enlace puede ver»</strong>.
-          Puedes crear adentro subcarpetas llamadas <code>epilogo</code>, <code>capitulo-1</code>, <code>capitulo-2</code>, <code>capitulo-3</code>, <code>capitulo-4</code> o incluso <code>capitulo-5 - Nuevo Título</code>.
+          Sube tus fotografías a una carpeta de Google Drive con subcarpetas <code>epilogo</code>, <code>capitulo-1</code>..<code>capitulo-4</code>.
+          Puedes autenticarte con tu <strong>OAuth 2.0 Client ID</strong> cargado desde <code>.env</code> o con una <strong>API Key</strong> pública.
         </p>
+        <div class="drive-env-badge" id="drive-env-info" hidden></div>
         <div class="drive-status-box" id="drive-modal-status"></div>
         <form id="drive-cfg-form" method="dialog">
           <div class="drive-field">
-            <label for="inp-drive-key">Google Cloud / AI Studio API Key (con Google Drive API habilitada)</label>
+            <label for="inp-drive-root">Enlace o ID de la Carpeta Raíz en Google Drive (GOOGLE_DRIVE_FOLDER_URL)</label>
+            <input type="text" id="inp-drive-root" placeholder="https://drive.google.com/drive/folders/1AbCdEf... o ID">
+            <small>El sistema extrae automáticamente el ID aunque pegues el enlace completo.</small>
+          </div>
+          <div class="drive-field">
+            <label for="inp-drive-client">OAuth 2.0 Client ID (GOOGLE_CLIENT_ID en .env)</label>
+            <input type="text" id="inp-drive-client" placeholder="123456-abc.apps.googleusercontent.com" autocomplete="off">
+          </div>
+          <div class="drive-field">
+            <label for="inp-drive-key">API Key Pública (Opcional · GOOGLE_DRIVE_API_KEY para lectura sin login)</label>
             <input type="password" id="inp-drive-key" placeholder="AIzaSy..." autocomplete="off">
           </div>
           <div class="drive-field">
-            <label for="inp-drive-root">Enlace o ID de la Carpeta Raíz en Google Drive</label>
-            <input type="text" id="inp-drive-root" placeholder="https://drive.google.com/drive/folders/1AbCdEf... o ID">
-            <small>El sistema detecta automáticamente el ID aunque pegues el enlace completo de Drive.</small>
-          </div>
-          <div class="drive-field">
-            <label for="inp-drive-mode">Modo de combinación con fotos locales</label>
+            <label for="inp-drive-mode">Modo de visualización</label>
             <select id="inp-drive-mode">
-              <option value="hibrido">Híbrido (Conservar fotos locales + agregar nuevas de Drive)</option>
               <option value="reemplazar">Reemplazar (Usar únicamente las fotos alojadas en Drive)</option>
+              <option value="hibrido">Híbrido (Combinar estructura YAML + fotos de Drive)</option>
             </select>
           </div>
           <div class="drive-actions">
-            <button type="button" class="drive-btn" id="btn-drive-clear">Restaurar Local</button>
+            <button type="button" class="drive-btn" id="btn-drive-clear">Restaurar</button>
             <button type="button" class="drive-btn" id="btn-drive-close">Cerrar</button>
-            <button type="submit" class="drive-btn primario">Guardar y Sincronizar Ahora</button>
+            <button type="button" class="drive-btn oauth" id="btn-drive-oauth">Autorizar con Google OAuth</button>
+            <button type="submit" class="drive-btn primario">Guardar y Sincronizar</button>
           </div>
         </form>
       `;
@@ -745,14 +879,42 @@
         sessionStorage.clear();
         location.reload();
       });
+
+      modalDriveEl.querySelector('#btn-drive-oauth').addEventListener('click', async () => {
+        try {
+          const clientId = modalDriveEl.querySelector('#inp-drive-client').value.trim();
+          const carpetaRaizId = extraerDriveId(modalDriveEl.querySelector('#inp-drive-root').value.trim());
+          const apiKey = modalDriveEl.querySelector('#inp-drive-key').value.trim();
+          const modo = modalDriveEl.querySelector('#inp-drive-mode').value;
+          localStorage.setItem(STORAGE_CFG_KEY, JSON.stringify({
+            activo: true,
+            clientId,
+            apiKey,
+            carpetaRaizId,
+            modo
+          }));
+          await solicitarTokenOAuthInteractivo(clientId);
+          await sincronizarDesdeDrive(true);
+        } catch (err) {
+          estadoSync = {
+            estado: 'error',
+            mensaje: `Error OAuth 2.0: ${err.message || err}`,
+            fotosSincronizadas: 0
+          };
+          actualizarInsigniaDriveUI();
+        }
+      });
+
       modalDriveEl.querySelector('#drive-cfg-form').addEventListener('submit', async e => {
         e.preventDefault();
         const apiKey = modalDriveEl.querySelector('#inp-drive-key').value.trim();
+        const clientId = modalDriveEl.querySelector('#inp-drive-client').value.trim();
         const carpetaRaizId = extraerDriveId(modalDriveEl.querySelector('#inp-drive-root').value.trim());
         const modo = modalDriveEl.querySelector('#inp-drive-mode').value;
         localStorage.setItem(STORAGE_CFG_KEY, JSON.stringify({
           activo: true,
           apiKey,
+          clientId,
           carpetaRaizId,
           modo
         }));
@@ -762,8 +924,20 @@
 
     const cfg = obtenerConfiguracionActiva();
     modalDriveEl.querySelector('#inp-drive-key').value = cfg.apiKey || '';
+    modalDriveEl.querySelector('#inp-drive-client').value = cfg.clientId || '';
     modalDriveEl.querySelector('#inp-drive-root').value = cfg.carpetaRaizId || '';
-    modalDriveEl.querySelector('#inp-drive-mode').value = cfg.modo || 'hibrido';
+    modalDriveEl.querySelector('#inp-drive-mode').value = cfg.modo || 'reemplazar';
+
+    const envInfo = modalDriveEl.querySelector('#drive-env-info');
+    if (envInfo) {
+      if (cfg.projectId || cfg.clientId) {
+        envInfo.hidden = false;
+        envInfo.innerHTML = `✓ Credenciales en <code>.env</code> detectadas · Proyecto: <strong>${cfg.projectId || 'Google Cloud'}</strong>`;
+      } else {
+        envInfo.hidden = true;
+      }
+    }
+
     actualizarInsigniaDriveUI();
     modalDriveEl.showModal();
   }
@@ -829,7 +1003,9 @@
     parseDotEnv,
     extraerDriveId,
     sincronizarDesdeDrive,
+    solicitarTokenOAuthInteractivo,
     abrirModalDrive,
+    obtenerConfiguracionActiva,
     obtenerEstado: () => estadoSync
   };
 })();

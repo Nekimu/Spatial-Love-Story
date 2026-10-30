@@ -1,7 +1,12 @@
-# Variables de entorno privadas (API Keys y enlaces privados)
+# Variables de entorno privadas (API Keys, OAuth y enlaces privados)
 .env
 .env.local
 .env.*.local
+
+# Archivos JSON de credenciales de Google Cloud / OAuth
+client_secret*.json
+*credentials*.json
+service-account*.json
 
 # Configuraciones de entorno local
 .claude/
