@@ -2,7 +2,7 @@
    js/capitulo.js · Versión 1.0 Adaptada por Capítulo, Storytelling y Fechas
    --------------------------------------------------------------------------
    - Construye la portada del capítulo, la franja de contexto temporal
-     (14 Mar 2026 / 27 de cada mes / 27 Mar 2027), los episodios con cálculo
+     (configurada en `historia.yaml`), los episodios con cálculo
      automático de días e hitos de relación y su carrusel 3D interactivo.
    - Alimentado íntegramente por `historia.yaml` (vía `js/datos-yaml.js`).
    ========================================================================== */
@@ -14,22 +14,24 @@
   const { esc, rico, plano, romano, pad2, fecha, img } = U;
 
   function calcularInsigniaEpisodio(fechaIso) {
-    if (!fechaIso) return '';
+    if (!fechaIso || fechaIso === 'fecha-date') return '';
     const [y, m, d] = String(fechaIso).split('-').map(Number);
     if (!y || !m || !d) return '';
     const dtEp = new Date(y, m - 1, d, 12, 0, 0);
     const F = (window.HISTORIA && window.HISTORIA.fechas) || {};
-    const dtConocernos = new Date(F.conocernos || '2026-03-14T00:00:00');
-    const dtNovios = new Date(F.novios || '2026-03-27T00:00:00');
-    const diaMes = Number(F.diaAniversarioMensual || 27);
+    if (!F.conocernos || F.conocernos === 'fecha-date') return '';
+    const dtConocernos = new Date(F.conocernos);
+    const dtNovios = F.novios && F.novios !== 'fecha-date' ? new Date(F.novios) : dtConocernos;
+    if (Number.isNaN(dtConocernos.getTime())) return '';
+    const diaMes = Number(F.diaAniversarioMensual || dtNovios.getDate() || 1);
 
     const diasDesdeConocernos = Math.max(1, Math.round((dtEp.getTime() - dtConocernos.getTime()) / 86400000) + 1);
     const diasDeNovios = Math.round((dtEp.getTime() - dtNovios.getTime()) / 86400000);
 
     if (d === diaMes && dtEp >= dtNovios) {
       const meses = (y - dtNovios.getFullYear()) * 12 + (m - 1 - dtNovios.getMonth());
-      if (meses === 0) return `✦ Día 27 · Oficialmente novios`;
-      return `✦ Aniversario día 27 · Mes #${meses} de novios`;
+      if (meses === 0) return `✦ Día ${diaMes} · Oficialmente novios`;
+      return `✦ Aniversario día ${diaMes} · Mes #${meses} de novios`;
     }
     if (diasDeNovios >= 0) {
       return `Día ${diasDesdeConocernos} desde conocernos · Día ${diasDeNovios + 1} de novios`;
@@ -80,7 +82,7 @@
         `</div>`;
     }
 
-    /* 2. Franja de contexto de fechas (14 Mar 2026 / 27 cada mes / 27 Mar 2027) */
+    /* 2. Franja de contexto de fechas (desde historia.yaml) */
     let franjaEl = document.getElementById('franja-hito');
     if (!franjaEl && portada) {
       franjaEl = document.createElement('div');
@@ -89,14 +91,19 @@
       portada.insertAdjacentElement('afterend', franjaEl);
     }
     if (franjaEl) {
+      const F = (window.HISTORIA && window.HISTORIA.fechas) || {};
       const est = window.DatosAmor && window.DatosAmor.calcularEstadoFechas
         ? window.DatosAmor.calcularEstadoFechas(new Date())
         : null;
-      const textoProximo27 = est
+      const diaMes = (est && est.novios.diaAniversarioMensual) || F.diaAniversarioMensual || 1;
+      const textoProximo = est
         ? (est.novios.esHoyAniversario
-            ? `¡Hoy es 27! (${est.novios.mesesCumplidos} meses)`
-            : `${est.novios.mesesCumplidos} meses · Próx. 27 en ${est.novios.faltaProximo27.dias}d`)
-        : 'Día 27 de cada mes';
+            ? `¡Hoy es ${diaMes}! (${est.novios.mesesCumplidos} meses)`
+            : `${est.novios.mesesCumplidos} meses · Próx. ${diaMes} en ${est.novios.faltaProximo27.dias}d`)
+        : `Día ${diaMes} de cada mes`;
+      const fConocernosTxt = F.conocernos && F.conocernos !== 'fecha-date' ? fecha(String(F.conocernos).slice(0, 10)) : 'fecha-date';
+      const fNoviosTxt = F.novios && F.novios !== 'fecha-date' ? fecha(String(F.novios).slice(0, 10)) : 'fecha-date';
+      const fBodaTxt = F.boda && F.boda !== 'fecha-date' ? fecha(String(F.boda).slice(0, 10)) : 'fecha-date';
 
       franjaEl.innerHTML =
         `<div class="franja-hito">` +
@@ -105,11 +112,16 @@
             `<span><strong>Hito del capítulo:</strong> ${esc(C.hitoRelacion || C.periodo || plano(C.titulo))}</span>` +
           `</div>` +
           `<div class="franja-hito-der">` +
-            `<span class="chip-fecha">Conocernos: <b>14 mar 2026</b></span>` +
-            `<span class="chip-fecha">Novios: <b>27 mar 2026</b> (${esc(textoProximo27)})</span>` +
-            `<span class="chip-fecha">Boda: <b>27 mar 2027</b></span>` +
+            `<span class="chip-fecha">Conocernos: <b>${esc(fConocernosTxt)}</b></span>` +
+            `<span class="chip-fecha">Novios: <b>${esc(fNoviosTxt)}</b> (${esc(textoProximo)})</span>` +
+            `<span class="chip-fecha">Boda: <b>${esc(fBodaTxt)}</b></span>` +
           `</div>` +
         `</div>`;
+    }
+
+    const pieCap = document.getElementById('pie-capitulo');
+    if (pieCap && C.hitoRelacion) {
+      pieCap.textContent = `Capítulo ${numRomano} · ${C.hitoRelacion}`;
     }
 
     /* 3. Episodios con storytelling, fechas y carrusel 3D */

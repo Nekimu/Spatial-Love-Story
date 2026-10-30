@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Unibody · Spatial Love Story 2.0</title>
-  <meta name="description" content="De mí para ti · Fotografías flotantes inspiradas en Gemini, contadores en vivo (14 Mar 2026, cada día 27 y boda el 27 Mar 2027) y capítulos interactivos.">
+  <meta name="description" content="De mí para ti · Fotografías flotantes inspiradas en Gemini, contadores en vivo (fecha-date) y capítulos interactivos.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
@@ -39,7 +39,7 @@
           <div class="hero-content" data-slot="content">
             <div class="hero-eyebrow">
               <span class="eyebrow-dot" aria-hidden="true"></span>
-              <span id="hero-eyebrow-text">Nuestra historia en movimiento · 14 Mar 2026 — 27 Mar 2027</span>
+              <span id="hero-eyebrow-text">Nuestra historia en movimiento · fecha-date — fecha-date</span>
             </div>
 
             <h1 class="hero-title" id="hero-title">
@@ -52,7 +52,7 @@
             </h1>
 
             <p class="hero-subtitle" id="hero-subtitle">
-              De mí para ti · Nos conocimos un 14 de marzo, nos hicimos novios un 27 de marzo y cada recuerdo flota en nuestro propio universo. Toca cualquier fotografía o entra a cada capítulo para vivir la historia.
+              De mí para ti · Nos conocimos en fecha-date, nos hicimos novios en fecha-date y cada recuerdo flota en nuestro propio universo. Toca cualquier fotografía o entra a cada capítulo para vivir la historia.
             </p>
 
             <div class="hero-buttons">
@@ -83,35 +83,35 @@
 
       <!-- ==================================================================
            2. PANEL DE CONTADORES AUTOMÁTICOS Y FECHAS CLAVE (Desde historia.yaml)
-              - Conocernos: 14 de marzo de 2026
-              - Novios: 27 de marzo de 2026 + Aniversario mensual cada día 27
-              - Boda tentativa: 27 de marzo de 2027 (1 año de novios)
+              - Conocernos: fecha-date
+              - Novios: fecha-date + Aniversario mensual
+              - Boda tentativa: fecha-date
            ================================================================== -->
       <section class="counters-section" aria-label="Contadores en vivo de nuestra relación">
         <div class="counters-grid">
-          <!-- Tarjeta 1: Fecha de Conocernos (14 Mar 2026) -->
+          <!-- Tarjeta 1: Fecha de Conocernos (fecha-date) -->
           <article class="counter-card" style="--card-grad: linear-gradient(90deg, #60a5fa, #a855f7)">
             <span class="counter-badge">✦ El Primer Encuentro</span>
             <div class="counter-main" id="cnt-conocernos-dias">— <em>días</em></div>
             <div class="counter-clock" id="cnt-conocernos-reloj">Calculando tiempo…</div>
-            <p class="counter-sub" id="cnt-conocernos-etiqueta">14 de marzo de 2026 · El día que nos conocimos</p>
+            <p class="counter-sub" id="cnt-conocernos-etiqueta">fecha-date · El día que nos conocimos</p>
           </article>
 
-          <!-- Tarjeta 2: Oficialmente Novios (27 Mar 2026) + Aniversario Cada Día 27 -->
+          <!-- Tarjeta 2: Oficialmente Novios (fecha-date) + Aniversario Mensual -->
           <article class="counter-card" style="--card-grad: linear-gradient(90deg, #f43f5e, #f59e0b)">
-            <span class="counter-badge">♥ Oficialmente Novios · Cada 27</span>
+            <span class="counter-badge" id="cnt-novios-badge">♥ Oficialmente Novios · Cada mes</span>
             <div class="counter-main" id="cnt-novios-meses">— <em>meses</em></div>
             <div class="counter-clock" id="cnt-novios-reloj">Calculando tiempo de novios…</div>
-            <p class="counter-sub" id="cnt-novios-etiqueta">27 de marzo de 2026 · Oficialmente novios</p>
-            <div class="counter-pill-27" id="cnt-novios-27" aria-live="polite">Calculando próximo día 27…</div>
+            <p class="counter-sub" id="cnt-novios-etiqueta">fecha-date · Oficialmente novios</p>
+            <div class="counter-pill-27" id="cnt-novios-27" aria-live="polite">Calculando próximo aniversario mensual…</div>
           </article>
 
-          <!-- Tarjeta 3: Día de la Boda Tentativo (27 Mar 2027 · 1 año de novios) -->
+          <!-- Tarjeta 3: Día de la Boda Tentativo (fecha-date) -->
           <article class="counter-card" style="--card-grad: linear-gradient(90deg, #f59e0b, #2dd4bf)">
             <span class="counter-badge">💍 Nuestra Boda · 1.er Aniversario</span>
             <div class="counter-main" id="cnt-boda-dias">Faltan — <em>días</em></div>
             <div class="counter-clock" id="cnt-boda-reloj">Calculando cuenta regresiva…</div>
-            <p class="counter-sub" id="cnt-boda-etiqueta">27 de marzo de 2027 · Un año después de hacernos novios</p>
+            <p class="counter-sub" id="cnt-boda-etiqueta">fecha-date · Un año después de hacernos novios</p>
             <div class="boda-progress" title="Progreso hacia nuestro primer año de novios y boda">
               <div class="boda-progress-bar" id="cnt-boda-barra"></div>
             </div>
@@ -129,8 +129,8 @@
         <div class="section-header scroll-reveal">
           <span class="section-eyebrow">✦ Nuestra Historia por Capítulos</span>
           <h2 class="section-title">Explora cada etapa y entra a su <em>propio capítulo</em></h2>
-          <p class="section-desc">
-            Desde el 14 de marzo de 2026 en que nos conocimos y el 27 de marzo en que nos hicimos novios. Previsualiza las nubes flotantes aquí o entra a cada capítulo para vivir su storytelling completo con carruseles 3D y fechas.
+          <p class="section-desc" id="capitulos-desc">
+            Desde el día en que nos conocimos y nos hicimos novios. Previsualiza las nubes flotantes aquí o entra a cada capítulo para vivir su storytelling completo con carruseles 3D y fechas.
           </p>
         </div>
 
@@ -194,7 +194,7 @@
     </dialog>
 
     <footer class="pie gutter">
-      <span>Unibody · Spatial Love Story (14 Mar 2026 · 27 Mar 2026 · 27 Mar 2027)</span>
+      <span id="pie-fechas">Unibody · Spatial Love Story (fecha-date)</span>
       <span>Datos centralizados en <code>historia.yaml</code></span>
     </footer>
   </div>

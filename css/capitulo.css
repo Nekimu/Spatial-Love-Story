@@ -1,6 +1,6 @@
 /* =====================================================================
    css/capitulo.css · Storytelling por capítulo adaptado con fechas,
-   hitos de aniversario (14 Mar / 27 de cada mes) y carrusel 3D
+   hitos de aniversario (fecha-date desde historia.yaml) y carrusel 3D
    ===================================================================== */
 .portada {
   position: relative;

@@ -2,13 +2,13 @@
    js/epilogo.js · El Origen en 3D (Rompecabezas guiado por scroll)
    --------------------------------------------------------------------------
    - Adapta la experiencia 3D de la versión 1.0 como el capítulo de origen
-     ("14 de marzo de 2026 · El día que nos conocimos").
-   - Muestra los contadores en tiempo real desde `historia.yaml` (14 Mar 2026,
-     27 de marzo de 2026 / cada 27 de mes y boda el 27 de marzo de 2027).
+     (configurado desde `historia.yaml`).
+   - Muestra los contadores en tiempo real desde `historia.yaml`.
    ========================================================================== */
 (function () {
   'use strict';
-  const U = window.Unibody, E = window.EPILOGO, S = window.SITIO;
+  const U = window.Unibody;
+  let E = window.EPILOGO, S = window.SITIO;
   if (!U || !E) return;
   const $ = (s, r = document) => r.querySelector(s);
   const { clamp, reduced, esc, rico, plano, romano, pad2 } = U;
@@ -36,47 +36,59 @@
 
   /* ---------- Contenido narrativo desde historia.yaml ---------- */
   const N = Math.max(2, (E.fragmentos || []).length);
-  const pareja = (S && S.pareja) || {};
-  $('#apertura').innerHTML =
-    `<p class="ceja">${esc(E.ceja || 'El Origen · 14 de marzo de 2026')}</p>` +
-    `<h1 class="display">${rico(E.titulo)}</h1>` +
-    `<p class="entrada">${esc(E.entrada)}</p>` +
-    `<p class="firma">De ${esc(pareja.el || 'mí')}, para ${esc(pareja.ella || 'ti')}.</p>` +
-    `<div class="juntos-grid">` +
-      `<div class="juntos"><span class="k">Nos conocimos · 14 de marzo de 2026</span><span class="v" id="juntos-conocernos">—</span></div>` +
-      `<div class="juntos"><span class="k">Oficialmente novios · 27 de marzo de 2026 (cada día 27)</span><span class="v" id="juntos-novios">—</span></div>` +
-    `</div>` +
-    `<div class="pista-scroll"><i aria-hidden="true"></i><span>Desliza para armar nuestra primera imagen</span></div>`;
+  function renderizarNarrativaEpilogo() {
+    E = window.EPILOGO || E;
+    S = window.SITIO || S;
+    const pareja = (S && S.pareja) || {};
+    const F = (window.HISTORIA && window.HISTORIA.fechas) || {};
+    const etiqConocernos = F.conocernosEtiqueta || 'Nos conocimos · fecha-date';
+    const etiqNovios = F.noviosEtiqueta || 'Oficialmente novios · fecha-date';
+    $('#apertura').innerHTML =
+      `<p class="ceja">${esc(E.ceja || 'El Origen · fecha-date')}</p>` +
+      `<h1 class="display">${rico(E.titulo)}</h1>` +
+      `<p class="entrada">${esc(E.entrada)}</p>` +
+      `<p class="firma">De ${esc(pareja.el || 'mí')}, para ${esc(pareja.ella || 'ti')}.</p>` +
+      `<div class="juntos-grid">` +
+        `<div class="juntos"><span class="k">${esc(etiqConocernos)}</span><span class="v" id="juntos-conocernos">—</span></div>` +
+        `<div class="juntos"><span class="k">${esc(etiqNovios)}</span><span class="v" id="juntos-novios">—</span></div>` +
+      `</div>` +
+      `<div class="pista-scroll"><i aria-hidden="true"></i><span>Desliza para armar nuestra primera imagen</span></div>`;
 
-  $('#fragmentos').innerHTML = (E.fragmentos || []).map((f, i) =>
-    `<section class="fragmento" data-i="${i}">` +
-      `<span class="n">${i === N - 1 ? 'El centro' : 'Pieza ' + romano(i + 1)}</span>` +
-      `<p class="t">${rico(f.texto)}</p>` +
-      (f.nota ? `<p class="nota">${esc(f.nota)}</p>` : '') +
-    `</section>`
-  ).join('');
+    $('#fragmentos').innerHTML = (E.fragmentos || []).map((f, i) =>
+      `<section class="fragmento" data-i="${i}">` +
+        `<span class="n">${i === N - 1 ? 'El centro' : 'Pieza ' + romano(i + 1)}</span>` +
+        `<p class="t">${rico(f.texto)}</p>` +
+        (f.nota ? `<p class="nota">${esc(f.nota)}</p>` : '') +
+      `</section>`
+    ).join('');
 
-  const c = E.cierre || {};
-  $('#cierre').innerHTML =
-    `<p class="ceja">${esc(c.ceja || 'El Origen')}</p>` +
-    `<h2 class="display">${rico(c.titulo || '')}</h2>` +
-    `<p class="entrada">${esc(c.texto || '')}</p>`;
+    const c = E.cierre || {};
+    $('#cierre').innerHTML =
+      `<p class="ceja">${esc(c.ceja || 'El Origen')}</p>` +
+      `<h2 class="display">${rico(c.titulo || '')}</h2>` +
+      `<p class="entrada">${esc(c.texto || '')}</p>`;
+
+    const pieEl = $('#pie-epilogo');
+    if (pieEl) pieEl.textContent = E.ceja || 'El Origen 3D · fecha-date';
+  }
+  renderizarNarrativaEpilogo();
 
   /* ---------- Contadores automáticos en tiempo real ---------- */
   const NUM = new Intl.NumberFormat('es-MX');
-  const elConocernos = $('#juntos-conocernos');
-  const elNovios = $('#juntos-novios');
   function reloj() {
     if (!window.DatosAmor || !window.DatosAmor.calcularEstadoFechas) return;
     const est = window.DatosAmor.calcularEstadoFechas(new Date());
+    const elConocernos = $('#juntos-conocernos');
+    const elNovios = $('#juntos-novios');
     if (elConocernos) {
       elConocernos.innerHTML = `<b>${NUM.format(est.conocernos.dias)} días</b> · ${pad2(est.conocernos.horas)}:${pad2(est.conocernos.minutos)}:${pad2(est.conocernos.segundos)}`;
     }
     if (elNovios) {
       const m = est.novios.mesesCumplidos;
+      const diaMes = est.novios.diaAniversarioMensual;
       const prox = est.novios.esHoyAniversario
-        ? '¡Hoy es 27!'
-        : `próx. 27 en ${est.novios.faltaProximo27.dias}d`;
+        ? `¡Hoy es ${diaMes}!`
+        : `próx. ${diaMes} en ${est.novios.faltaProximo27.dias}d`;
       elNovios.innerHTML = `<b>${m} ${m === 1 ? 'mes' : 'meses'}</b> (${NUM.format(est.novios.dias)} días · ${esc(prox)})`;
     }
   }
@@ -139,7 +151,7 @@
 
   /* ---------- Medidas ---------- */
   const ensamble = $('#ensamble'), col = $('#columna-escena'), mundo = $('#mundo'), marco = $('#marco');
-  const frags = [...document.querySelectorAll('.fragmento')];
+  let frags = [...document.querySelectorAll('.fragmento')];
   const lN = $('#leyenda-n'), lT = $('#leyenda-t'), lL = $('#leyenda-linea');
   let tops = [], alts = [], L = 0, movil = false, fw = 1, fh = 1;
   function medir() {
@@ -161,10 +173,10 @@
   const pedir = () => { if (!raf) raf = requestAnimationFrame(cuadro); };
 
   function leyenda() {
-    if (completo) { lN.textContent = '14 de marzo de 2026'; lT.textContent = 'Una sola imagen'; return; }
+    if (completo) { lN.textContent = (E.cierre && E.cierre.ceja) || E.ceja || 'fecha-date'; lT.textContent = 'Una sola imagen'; return; }
     if (activo < 0) { lN.textContent = 'El Origen'; lT.textContent = plano(E.titulo).split('.')[0] || ''; return; }
     lN.textContent = activo === N - 1 ? 'El centro' : `Pieza ${romano(activo + 1)} de ${romano(N)}`;
-    lT.textContent = plano(E.fragmentos[activo].texto);
+    lT.textContent = plano((E.fragmentos[activo] && E.fragmentos[activo].texto) || '');
   }
 
   function cuadro(now) {
@@ -242,9 +254,14 @@
   U.puente($('#puente'));
 
   addEventListener('historia:actualizada', () => {
+    renderizarNarrativaEpilogo();
+    frags = [...document.querySelectorAll('.fragmento')];
+    medir();
+    leyenda();
+    reloj();
     const nuevoEp = window.EPILOGO;
     if (nuevoEp && nuevoEp.maestra && nuevoEp.maestra.src) {
-      const nuevaUrl = nuevoEp.maestra.src;
+      const nuevaUrl = U.resolverSrc ? U.resolverSrc(nuevoEp.maestra) : nuevoEp.maestra.src;
       document.querySelectorAll('#piezas .cara').forEach(cara => {
         cara.style.backgroundImage = `url('${esc(nuevaUrl)}')`;
       });
@@ -252,5 +269,6 @@
       if (kb) kb.style.backgroundImage = `url('${esc(nuevaUrl)}')`;
     }
     U.puente($('#puente'));
+    pedir();
   });
 })();

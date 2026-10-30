@@ -1,7 +1,8 @@
-# Variables de entorno privadas (API Keys, OAuth y enlaces privados)
+# Variables de entorno privadas y archivo YAML con fechas/datos reales
 .env
 .env.local
 .env.*.local
+historia.yaml
 
 # Archivos JSON de credenciales de Google Cloud / OAuth
 client_secret*.json

@@ -4,10 +4,10 @@
    - Alimentado íntegramente por `historia.yaml` (vía `js/datos-yaml.js`).
    - Replica la experiencia espacial de `gemini.google/about/` (<gemini-love-hero>)
      con 8 fotografías flotantes, bokeh :has() y lightbox FLIP.
-   - Calcula y actualiza cada segundo los 3 contadores oficiales:
-     1) Desde que nos conocimos: 14 de marzo de 2026
-     2) Oficialmente novios: 27 de marzo de 2026 + Aniversario cada día 27 de mes
-     3) Nuestra Boda tentativa: 27 de marzo de 2027 (1 año después de novios)
+   - Calcula y actualiza cada segundo los 3 contadores oficiales configurados en `historia.yaml`:
+     1) Desde que nos conocimos (`fechas.conocernos`)
+     2) Oficialmente novios (`fechas.novios`) + Aniversario mensual (`fechas.diaAniversarioMensual`)
+     3) Nuestra Boda tentativa (`fechas.boda`)
    - Conecta cada capítulo con su experiencia de storytelling (v1.0).
    ========================================================================== */
 (function () {
@@ -82,13 +82,17 @@
 
     /* 1. Foto maestra del Epílogo 3D */
     if (ep.maestra) {
+      const fFechas = H.fechas || {};
+      const fechaOrigen = fFechas.conocernos && fFechas.conocernos !== 'fecha-date'
+        ? String(fFechas.conocernos).slice(0, 10)
+        : 'fecha-date';
       registrarFoto(ep.maestra, {
         capituloId: 'epilogo',
         capituloArchivo: ep.archivo || 'epilogo.html',
         capituloCorto: 'El Origen 3D',
         capituloTitulo: plano(ep.titulo || 'Antes de ti'),
-        episodioTitulo: 'Rompecabezas 3D · 14 de marzo de 2026',
-        fecha: '2026-03-14',
+        episodioTitulo: ep.ceja || 'Rompecabezas 3D · fecha-date',
+        fecha: fechaOrigen,
         lugar: 'El día que nos conocimos'
       });
     }
@@ -571,13 +575,14 @@
   }
 
   /* ========================================================================
-     3. Los 3 Contadores Automáticos en Vivo (14 Mar / 27 cada mes / 27 Mar 2027)
+     3. Los 3 Contadores Automáticos en Vivo (configurados en historia.yaml)
      ======================================================================== */
   function actualizarContadoresEnVivo() {
     if (!window.DatosAmor || !window.DatosAmor.calcularEstadoFechas) return;
     const est = window.DatosAmor.calcularEstadoFechas(new Date());
+    const diaMes = est.novios.diaAniversarioMensual;
 
-    /* 1) Fecha de conocernos: 14 de marzo de 2026 */
+    /* 1) Fecha de conocernos */
     const elConocernosDias = document.getElementById('cnt-conocernos-dias');
     const elConocernosReloj = document.getElementById('cnt-conocernos-reloj');
     const elConocernosEtiq = document.getElementById('cnt-conocernos-etiqueta');
@@ -591,11 +596,15 @@
       elConocernosEtiq.textContent = est.conocernos.etiqueta;
     }
 
-    /* 2) Oficialmente novios: 27 de marzo de 2026 + Aniversario mensual cada 27 */
+    /* 2) Oficialmente novios + Aniversario mensual */
+    const elNoviosBadge = document.getElementById('cnt-novios-badge');
     const elNoviosMeses = document.getElementById('cnt-novios-meses');
     const elNoviosReloj = document.getElementById('cnt-novios-reloj');
     const elNoviosEtiq = document.getElementById('cnt-novios-etiqueta');
     const elNovios27 = document.getElementById('cnt-novios-27');
+    if (elNoviosBadge && diaMes) {
+      elNoviosBadge.textContent = `♥ Oficialmente Novios · Cada ${diaMes}`;
+    }
     if (elNoviosMeses) {
       const m = est.novios.mesesCumplidos;
       elNoviosMeses.innerHTML = `${m} <em>${m === 1 ? 'mes' : 'meses'}</em> · ${numFmt.format(est.novios.dias)} días`;
@@ -608,14 +617,14 @@
     }
     if (elNovios27) {
       if (est.novios.esHoyAniversario) {
-        elNovios27.innerHTML = `✨ <strong>¡Hoy es 27!</strong> Feliz mes #${est.novios.mesesCumplidos} de novios`;
+        elNovios27.innerHTML = `✨ <strong>¡Hoy es ${diaMes}!</strong> Feliz mes #${est.novios.mesesCumplidos} de novios`;
       } else {
         const f27 = est.novios.faltaProximo27;
-        elNovios27.innerHTML = `Próximo <strong>día 27</strong> (mes #${est.novios.proximoMesNumero} · ${esc(est.novios.proximoFechaEtiqueta)}): faltan <strong>${f27.dias}d ${pad2(f27.horas)}h ${pad2(f27.minutos)}m ${pad2(f27.segundos)}s</strong>`;
+        elNovios27.innerHTML = `Próximo <strong>día ${diaMes}</strong> (mes #${est.novios.proximoMesNumero} · ${esc(est.novios.proximoFechaEtiqueta)}): faltan <strong>${f27.dias}d ${pad2(f27.horas)}h ${pad2(f27.minutos)}m ${pad2(f27.segundos)}s</strong>`;
       }
     }
 
-    /* 3) Día de la boda tentativo: 27 de marzo de 2027 (1 año de novios) */
+    /* 3) Día de la boda tentativo */
     const elBodaDias = document.getElementById('cnt-boda-dias');
     const elBodaReloj = document.getElementById('cnt-boda-reloj');
     const elBodaEtiq = document.getElementById('cnt-boda-etiqueta');
@@ -666,13 +675,16 @@
     const caps = H.capitulos || [];
 
     /* Portal 0: El Origen en 3D (epilogo.html) */
+    const fFechas = H.fechas || {};
+    const etiqConocernos = fFechas.conocernosEtiqueta || 'fecha-date · El día que nos conocimos';
+    const cejaOrigen = ep.ceja || 'El Origen 3D · fecha-date';
     const fotoMaestra = ep.maestra ? MAPA_FOTOS.get(ep.maestra.id) : null;
     const htmlOrigen = ep.maestra ? (
       `<article class="chapter-showcase scroll-reveal" id="sec-epilogo" style="--cap-acento:#f43f5e;--cap-acento-2:#f59e0b">` +
         `<div class="chapter-info">` +
-          `<span class="chapter-pill"><span>El Origen 3D</span> · 14 de marzo de 2026</span>` +
+          `<span class="chapter-pill"><span>El Origen 3D</span> · ${esc(cejaOrigen)}</span>` +
           `<h3 class="chapter-heading">${rico(ep.titulo || 'Antes de ti, eran *piezas sueltas*.')}</h3>` +
-          `<div class="chapter-hito-tag">✦ 14 de marzo de 2026 · El día que nos conocimos</div>` +
+          `<div class="chapter-hito-tag">✦ ${esc(etiqConocernos)}</div>` +
           `<p class="chapter-summary">${esc(ep.entrada || '')}</p>` +
           `<div class="episode-active-card">` +
             `<span class="episode-active-meta">Experiencia Interactiva 3D · 7 fragmentos</span>` +
@@ -687,7 +699,7 @@
             `<button type="button" class="cloud-card" style="grid-column:2 / 12;grid-row:1 / 7;--float-duration:10s;--float-delay:0s;--float-x:1;--aspect:${fotoMaestra.aspect};--tono:${fotoMaestra.tono}" data-foto-id="${esc(fotoMaestra.id)}" aria-label="Ver foto maestra">` +
               `<div class="item-media" style="--aspect:${fotoMaestra.aspect};--tono:${fotoMaestra.tono}">` +
                 renderMediaImg(fotoMaestra, { lazy: true, sizes: '(max-width: 600px) 88vw, 520px' }) +
-                `<div class="floater-caption"><small>El Origen · 14 Mar 2026</small><span>${esc(fotoMaestra.pie)}</span></div>` +
+                `<div class="floater-caption"><small>${esc(cejaOrigen)}</small><span>${esc(fotoMaestra.pie)}</span></div>` +
               `</div>` +
               `<span class="expand-icon" aria-hidden="true">${EXPAND_SVG}</span>` +
             `</button>`

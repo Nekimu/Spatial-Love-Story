@@ -63,7 +63,7 @@
     return '';
   }
 
-  /* Convierte fecha EXIF "2026:05:27 14:22:10" o ISO a "2026-05-27" */
+  /* Convierte fecha EXIF "YYYY:MM:DD HH:MM:SS" o ISO a "YYYY-MM-DD" */
   function normalizarFechaDrive(metaTime, createdTime) {
     if (metaTime) {
       const m = String(metaTime).match(/^(\d{4})[:\-](\d{2})[:\-](\d{2})/);
@@ -473,7 +473,7 @@
         id: 'ep-maestra',
         src: paqueteDrive.epilogo.portada.src,
         mini: paqueteDrive.epilogo.portada.mini,
-        pie: paqueteDrive.epilogo.portada.pie || (H.epilogo.maestra && H.epilogo.maestra.pie) || '14 de marzo · La imagen completa'
+        pie: paqueteDrive.epilogo.portada.pie || (H.epilogo.maestra && H.epilogo.maestra.pie) || 'fecha-date · La imagen completa'
       });
       totalFotosDrive++;
     }

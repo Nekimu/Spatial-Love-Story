@@ -1,14 +1,14 @@
 /* ==========================================================================
    js/datos-yaml.js · Cargador Maestro de historia.yaml + Motor de Fechas
    --------------------------------------------------------------------------
-   - Lee y parsea `historia.yaml` en tiempo real cuando se sirve por HTTP/HTTPS.
-   - Incluye respaldo sincronizado automático por si se abre con doble clic (file://).
+   - Lee y parsea `historia.yaml` en tiempo real cuando se sirve por HTTP/HTTPS
+     (con respaldo a `historia.example.yaml` y plantilla interna `fecha-date`).
    - Pobla window.HISTORIA, window.SITIO, window.EPILOGO, window.CAPITULOS,
      window.FINAL y aplica los colores del tema de cada capítulo.
-   - Calcula automáticamente:
-     1) Tiempo desde que se conocieron (14 de marzo de 2026)
-     2) Tiempo de novios (27 de marzo de 2026) + próximo aniversario día 27 de cada mes
-     3) Cuenta regresiva a la boda (27 de marzo de 2027 · 1 año de novios)
+   - Calcula automáticamente desde `historia.yaml`:
+     1) Tiempo desde que se conocieron (`fechas.conocernos`)
+     2) Tiempo de novios (`fechas.novios`) + próximo aniversario mensual (`fechas.diaAniversarioMensual`)
+     3) Cuenta regresiva a la boda (`fechas.boda`)
    ========================================================================== */
 (function () {
   'use strict';
@@ -112,7 +112,7 @@
     return parseBlock(0);
   }
 
-  /* ---------- Respaldo embebido sincronizado con historia.yaml ---------- */
+  /* ---------- Plantilla genérica con marcadores fecha-date (sin fechas reales en el código) ---------- */
   const FALLBACK_YAML = `
 version: "2.0"
 marca: "Unibody"
@@ -133,45 +133,45 @@ googleDrive:
     cap-3: ""
     cap-4: ""
 fechas:
-  conocernos: "2026-03-14T00:00:00"
-  conocernosEtiqueta: "14 de marzo de 2026 · El día que nos conocimos"
-  novios: "2026-03-27T00:00:00"
-  noviosEtiqueta: "27 de marzo de 2026 · Oficialmente novios"
-  diaAniversarioMensual: 27
-  aniversarioMensualNota: "Cada 27 de mes celebramos un mes más siendo novios"
-  boda: "2027-03-27T17:00:00"
-  bodaEtiqueta: "27 de marzo de 2027 · Nuestra Boda (1.er Aniversario)"
+  conocernos: "fecha-date"
+  conocernosEtiqueta: "fecha-date · El día que nos conocimos"
+  novios: "fecha-date"
+  noviosEtiqueta: "fecha-date · Oficialmente novios"
+  diaAniversarioMensual: 1
+  aniversarioMensualNota: "Cada mes celebramos un mes más siendo novios"
+  boda: "fecha-date"
+  bodaEtiqueta: "fecha-date · Nuestra Boda (Aniversario)"
 hitos:
-  - fecha: "2026-03-14"
+  - fecha: "fecha-date"
     titulo: "El primer encuentro"
-    detalle: "14 de marzo de 2026 · El día en que nuestros caminos se cruzaron por primera vez."
+    detalle: "fecha-date · El día en que nuestros caminos se cruzaron por primera vez."
     capitulo: "epilogo"
-  - fecha: "2026-03-27"
+  - fecha: "fecha-date"
     titulo: "Oficialmente novios"
-    detalle: "27 de marzo de 2026 · El inicio de nuestra tradición de celebrar cada día 27."
+    detalle: "fecha-date · El inicio de nuestra tradición de celebrar cada mes."
     capitulo: "cap-1"
-  - fecha: "2026-05-27"
-    titulo: "Dos meses de novios"
-    detalle: "27 de mayo de 2026 · Un 27 guardado desde la mañana hasta el pastel con velas."
+  - fecha: "fecha-date"
+    titulo: "Aniversario mensual"
+    detalle: "fecha-date · Un aniversario guardado desde la mañana hasta la noche."
     capitulo: "cap-1"
-  - fecha: "2026-06-22"
+  - fecha: "fecha-date"
     titulo: "Tarde de aventura"
-    detalle: "Junio de 2026 · Cafés, espejos, risas espontáneas y flores en el pelo."
+    detalle: "fecha-date · Cafés, espejos, risas espontáneas y flores en el pelo."
     capitulo: "cap-2"
-  - fecha: "2026-07-18"
+  - fecha: "fecha-date"
     titulo: "Nuestro viaje al mar"
-    detalle: "18 al 20 de julio de 2026 · Tres días de olas, lancha, muelle y atardeceres dorados."
+    detalle: "fecha-date · Días de olas, lancha, muelle y atardeceres dorados."
     capitulo: "cap-3"
-  - fecha: "2026-07-24"
+  - fecha: "fecha-date"
     titulo: "La pregunta y el Sí"
-    detalle: "24 de julio de 2026 · Un picnic al atardecer, dos copas, un anillo y un para siempre."
+    detalle: "fecha-date · Un picnic al atardecer, dos copas, un anillo y un para siempre."
     capitulo: "cap-4"
-  - fecha: "2027-03-27"
+  - fecha: "fecha-date"
     titulo: "Nuestra Boda"
-    detalle: "27 de marzo de 2027 · Exactamente un año después de hacernos novios."
+    detalle: "fecha-date · Un año después de hacernos novios."
     capitulo: "final"
 portadaPrincipal:
-  ceja: "Nuestra historia en movimiento · 14 Mar 2026 — 27 Mar 2027"
+  ceja: "Nuestra historia en movimiento · fecha-date — fecha-date"
   tituloPalabras:
     - "Mira"
     - "todo"
@@ -179,7 +179,7 @@ portadaPrincipal:
     - "que"
     - "hemos"
     - "*vivido*"
-  subtitulo: "De mí para ti · Nos conocimos un 14 de marzo, nos hicimos novios un 27 de marzo y cada recuerdo flota en nuestro propio universo. Toca cualquier fotografía o entra a cada capítulo para vivir la historia."
+  subtitulo: "De mí para ti · Nos conocimos en fecha-date, nos hicimos novios en fecha-date y cada recuerdo flota en nuestro propio universo. Toca cualquier fotografía o entra a cada capítulo para vivir la historia."
   pie: "Pasa el cursor sobre las fotos flotantes para enfocarlas o entra a cada capítulo"
   destacadasHero:
     - "ep-maestra"
@@ -193,9 +193,9 @@ portadaPrincipal:
 epilogo:
   archivo: "epilogo.html"
   corto: "Origen 3D"
-  ceja: "El Origen · 14 y 27 de marzo de 2026"
+  ceja: "El Origen · fecha-date"
   titulo: "Dos caminos.<br>Una sola *historia*."
-  entrada: "El 14 de marzo de 2026 nos conocimos y el 27 de marzo comenzó oficialmente nuestra historia. Desliza para unir cada pieza hasta formar la imagen completa."
+  entrada: "En fecha-date nos conocimos y en fecha-date comenzó oficialmente nuestra historia. Desliza para unir cada pieza hasta formar la imagen completa."
   transicion: "fundido"
   tema:
     fondo: "#07070a"
@@ -211,18 +211,18 @@ epilogo:
     tono: "#1d1312"
     aspect: "4/5"
     alt: "Nuestra primera foto juntos"
-    pie: "Nuestra primera foto juntos · Marzo de 2026"
+    pie: "Nuestra primera foto juntos · fecha-date"
   fragmentos:
-    - texto: "Hubo un 14 de marzo en que dos caminos se cruzaron."
-      nota: "14 de marzo de 2026 · El día que nos conocimos"
-    - texto: "Trece días después, el *27 de marzo*, empezó oficialmente lo nuestro."
-      nota: "27 de marzo de 2026 · Nuestro primer día como novios"
-    - texto: "Después vinieron los cafés, los espejos y cada día *27*."
-      nota: "Primavera y junio de 2026 · Celebrando cada mes juntos"
+    - texto: "Hubo un día en que dos caminos se cruzaron."
+      nota: "fecha-date · El día que nos conocimos"
+    - texto: "Después empezó oficialmente *lo nuestro*."
+      nota: "fecha-date · Nuestro primer día como novios"
+    - texto: "Después vinieron los cafés, los espejos y cada *aniversario mensual*."
+      nota: "fecha-date · Celebrando cada mes juntos"
     - texto: "Luego el *mar* y una tarde con una pregunta."
-      nota: "Julio de 2026 · Las olas y el sí al atardecer"
-    - texto: "Y hoy, rumbo a nuestro próximo *27 de marzo*, todo encaja."
-      nota: "27 de marzo de 2027 · El día de nuestra boda"
+      nota: "fecha-date · Las olas y el sí al atardecer"
+    - texto: "Y hoy, rumbo a nuestra *boda*, todo encaja."
+      nota: "fecha-date · El día de nuestra boda"
   cierre:
     ceja: "El Origen"
     titulo: "Una sola *imagen*."
@@ -233,9 +233,9 @@ capitulos:
     romano: "I"
     archivo: "capitulo-1.html"
     titulo: "Donde todo *empezó*"
-    periodo: "14 Mar — 27 May 2026"
-    hitoCapitulo: "Nos conocimos el 14 de marzo · Novios desde el 27 de marzo de 2026"
-    resumen: "Del 14 de marzo en que nos conocimos al 27 de marzo en que nos hicimos novios, nuestras primeras salidas y aquel segundo aniversario mensual del 27 de mayo."
+    periodo: "fecha-date — fecha-date"
+    hitoCapitulo: "Nos conocimos en fecha-date · Novios desde fecha-date"
+    resumen: "Desde el día en que nos conocimos hasta hacernos novios, nuestras primeras salidas y nuestros primeros aniversarios mensuales."
     transicion: "iris"
     tema:
       fondo: "#0a0709"
@@ -250,13 +250,13 @@ capitulos:
       mini: "assets/fotos/capitulo-1/portada-s.webp"
       tono: "#282525"
       aspect: "16/10"
-      alt: "Selfie de los dos, muy cerca, una mañana de mayo"
-      pie: "Una mañana de mayo, muy cerca"
+      alt: "Selfie de los dos, muy cerca"
+      pie: "Una mañana juntos, muy cerca"
     episodios:
       - titulo: "Las primeras fotos"
-        fecha: "2026-04-16"
-        lugar: "Tras nuestro primer 27 de marzo"
-        texto: "Después de conocernos el 14 de marzo y hacernos novios el 27, cada paseo empezó a convertirse en recuerdo: la montaña detrás, una tienda cualquiera, una luz morada. Así empezó este álbum."
+        fecha: "fecha-date"
+        lugar: "Primeras salidas"
+        texto: "Después de conocernos y hacernos novios, cada paseo empezó a convertirse en recuerdo: la montaña detrás, una tienda cualquiera, una luz morada. Así empezó este álbum."
         fotos:
           - id: "c1-e1-1"
             src: "assets/fotos/capitulo-1/e1-1.webp"
@@ -281,10 +281,10 @@ capitulos:
             mini: "assets/fotos/capitulo-1/e1-4-s.webp"
             tono: "#2d2421"
             aspect: "4/5"
-            pie: "Abrazados, celebrando nuestro primer mes (27 de abril)"
-      - titulo: "Días de mayo"
-        fecha: "2026-05-14"
-        lugar: "Mayo de 2026"
+            pie: "Abrazados, celebrando nuestro primer mes"
+      - titulo: "Días juntos"
+        fecha: "fecha-date"
+        lugar: "fecha-date"
         texto: "Mañanas sin prisa, caras chistosas frente a la cámara y la costumbre, cada vez más nuestra, de tomarnos una foto más."
         fotos:
           - id: "c1-e2-1"
@@ -292,7 +292,7 @@ capitulos:
             mini: "assets/fotos/capitulo-1/e2-1-s.webp"
             tono: "#2a2420"
             aspect: "4/5"
-            pie: "Una mañana de mayo"
+            pie: "Una mañana juntos"
           - id: "c1-e2-2"
             src: "assets/fotos/capitulo-1/e2-2.webp"
             mini: "assets/fotos/capitulo-1/e2-2-s.webp"
@@ -305,10 +305,10 @@ capitulos:
             tono: "#372c29"
             aspect: "4/5"
             pie: "Bien arreglados"
-      - titulo: "Un 27 de *mayo*"
-        fecha: "2026-05-27"
-        lugar: "Nuestro 2.º aniversario mensual"
-        texto: "Cumplíamos dos meses de novios y ese 27 quedó guardado de principio a fin: la primera foto de la mañana, el espejo por la tarde, la carretera al atardecer y, en la noche, un pastel con velas."
+      - titulo: "Nuestro *aniversario*"
+        fecha: "fecha-date"
+        lugar: "Nuestro aniversario mensual"
+        texto: "Cumplíamos un mes más de novios y ese día quedó guardado de principio a fin: la primera foto de la mañana, el espejo por la tarde, la carretera al atardecer y, en la noche, un pastel con velas."
         fotos:
           - id: "c1-e3-1"
             src: "assets/fotos/capitulo-1/e3-1.webp"
@@ -333,7 +333,7 @@ capitulos:
             mini: "assets/fotos/capitulo-1/e3-4-s.webp"
             tono: "#1f1916"
             aspect: "4/5"
-            pie: "Pastel y velas por nuestro día 27"
+            pie: "Pastel y velas por nuestro aniversario"
           - id: "c1-e3-5"
             src: "assets/fotos/capitulo-1/e3-5.webp"
             mini: "assets/fotos/capitulo-1/e3-5-s.webp"
@@ -345,9 +345,9 @@ capitulos:
     romano: "II"
     archivo: "capitulo-2.html"
     titulo: "Nuestros *días*"
-    periodo: "31 May — 28 Jun 2026"
-    hitoCapitulo: "Rumbo a nuestro 3.er mes de novios (27 de junio de 2026)"
-    resumen: "Los días normales que, vistos juntos, resultaron ser los mejores: tardes de café, aventuras espontáneas y nuestro tercer 27 juntos."
+    periodo: "fecha-date — fecha-date"
+    hitoCapitulo: "Rumbo a nuestro aniversario mensual (fecha-date)"
+    resumen: "Los días normales que, vistos juntos, resultaron ser los mejores: tardes de café, aventuras espontáneas y un mes más juntos."
     transicion: "cortina"
     tema:
       fondo: "#0a0806"
@@ -366,9 +366,9 @@ capitulos:
       pie: "Los dos sobre el pasto, con flores en el pelo"
     episodios:
       - titulo: "Cafés y espejos"
-        fecha: "2026-05-31"
-        lugar: "Finales de mayo y principios de junio"
-        texto: "Una bebida verde en la mesa, el espejo de siempre y nosotros intentando salir bien en la foto. Casi nunca a la primera."
+        fecha: "fecha-date"
+        lugar: "Tardes de café"
+        texto: "Una bebida en la mesa, el espejo de siempre y nosotros intentando salir bien en la foto. Casi nunca a la primera."
         fotos:
           - id: "c2-e1-1"
             src: "assets/fotos/capitulo-2/e1-1.webp"
@@ -389,8 +389,8 @@ capitulos:
             aspect: "4/5"
             pie: "Y un beso, también en el espejo"
       - titulo: "Lo de todos los días"
-        fecha: "2026-06-15"
-        lugar: "Junio de 2026"
+        fecha: "fecha-date"
+        lugar: "fecha-date"
         texto: "Sol de mediodía, lentes oscuros, caras raras y paseos que se alargaban hasta la noche. Nada extraordinario y, justo por eso, todo."
         fotos:
           - id: "c2-e2-1"
@@ -416,9 +416,9 @@ capitulos:
             mini: "assets/fotos/capitulo-2/e2-4-s.webp"
             tono: "#1e1816"
             aspect: "4/5"
-            pie: "Una noche de junio"
+            pie: "Una noche especial"
       - titulo: "Tarde de *aventura*"
-        fecha: "2026-06-22"
+        fecha: "fecha-date"
         lugar: "Escapada de fin de semana"
         texto: "Hay tardes que no necesitan explicación: una risa que no se acababa y nosotros sin poder dejar de tomarnos fotos."
         fotos:
@@ -441,9 +441,9 @@ capitulos:
             aspect: "4/5"
             pie: "Directo a la cámara"
       - titulo: "Flores en el *pelo*"
-        fecha: "2026-06-27"
-        lugar: "Nuestro 3.er aniversario mensual (27 de junio)"
-        texto: "Tardes cerca, muy cerca, celebrando tres meses de novios. Y un día sobre el pasto en el que terminé con flores en el pelo."
+        fecha: "fecha-date"
+        lugar: "Nuestro aniversario mensual"
+        texto: "Tardes cerca, muy cerca, celebrando un mes más de novios. Y un día sobre el pasto en el que terminé con flores en el pelo."
         fotos:
           - id: "c2-e4-1"
             src: "assets/fotos/capitulo-2/e4-1.webp"
@@ -474,9 +474,9 @@ capitulos:
     romano: "III"
     archivo: "capitulo-3.html"
     titulo: "Frente al *mar*"
-    periodo: "18 — 20 Jul 2026"
-    hitoCapitulo: "Nuestra escapada al mar antes del 4.º aniversario mensual"
-    resumen: "Tres días de julio con sal, sol, olas y la certeza de que cualquier lugar se siente como casa cuando estamos juntos."
+    periodo: "fecha-date — fecha-date"
+    hitoCapitulo: "Nuestra escapada al mar"
+    resumen: "Días con sal, sol, olas y la certeza de que cualquier lugar se siente como casa cuando estamos juntos."
     transicion: "zoom"
     tema:
       fondo: "#05090b"
@@ -495,9 +495,9 @@ capitulos:
       pie: "Los dos de pie en la playa, frente al mar"
     episodios:
       - titulo: "Llegar al *mar*"
-        fecha: "2026-07-18"
+        fecha: "fecha-date"
         lugar: "Día 1 · Frente a las olas"
-        texto: "El primer vistazo a las olas, el viento despeinándonos, un paseo en lancha con chalecos verdes y un cocodrilo que se dejó cargar (más o menos)."
+        texto: "El primer vistazo a las olas, el viento despeinándonos, un paseo en lancha y una aventura inolvidable."
         fotos:
           - id: "c3-e1-1"
             src: "assets/fotos/capitulo-3/e1-1.webp"
@@ -522,7 +522,7 @@ capitulos:
             mini: "assets/fotos/capitulo-3/e1-4-s.webp"
             tono: "#2b2724"
             aspect: "4/5"
-            pie: "Valientes con un cocodrilo"
+            pie: "Aventura en la costa"
           - id: "c3-e1-5"
             src: "assets/fotos/capitulo-3/e1-5.webp"
             mini: "assets/fotos/capitulo-3/e1-5-s.webp"
@@ -530,9 +530,9 @@ capitulos:
             aspect: "4/5"
             pie: "En la lancha"
       - titulo: "El muelle y la *noche*"
-        fecha: "2026-07-18"
+        fecha: "fecha-date"
         lugar: "Noche junto al agua"
-        texto: "Un beso en el muelle con el agua quieta detrás. Y cuando cayó la noche, las luces reflejadas en el agua y tu vestido de flores."
+        texto: "Un beso en el muelle con el agua quieta detrás. Y cuando cayó la noche, las luces reflejadas en el agua."
         fotos:
           - id: "c3-e2-1"
             src: "assets/fotos/capitulo-3/e2-1.webp"
@@ -553,7 +553,7 @@ capitulos:
             aspect: "4/5"
             pie: "La noche era nuestra"
       - titulo: "Un día *más*"
-        fecha: "2026-07-19"
+        fecha: "fecha-date"
         lugar: "Día 2 · Sol y mar"
         texto: "Muros antiguos pintados de amarillo, sol de tarde y el agua otra vez. La sensación de que podíamos quedarnos ahí para siempre."
         fotos:
@@ -576,7 +576,7 @@ capitulos:
             aspect: "4/5"
             pie: "Mojados y felices"
       - titulo: "El último *día*"
-        fecha: "2026-07-20"
+        fecha: "fecha-date"
         lugar: "Día 3 · Atardecer en la playa"
         texto: "El último día lo quisimos estirar al máximo: el mar en los pies, un beso en la orilla y una tarde dorada de la que no queríamos irnos."
         fotos:
@@ -621,9 +621,9 @@ capitulos:
     romano: "IV"
     archivo: "capitulo-4.html"
     titulo: "Para *siempre*"
-    periodo: "24 Jul 2026 — Hoy"
-    hitoCapitulo: "El Sí (24 de julio de 2026) · Rumbo al 27 de marzo de 2027"
-    resumen: "Una tarde de picnic en vísperas de nuestro cuarto 27, un brindis, un anillo y el camino hacia nuestra boda en nuestro primer aniversario."
+    periodo: "fecha-date — Hoy"
+    hitoCapitulo: "El Sí (fecha-date) · Rumbo a fecha-date"
+    resumen: "Una tarde de picnic, un brindis, un anillo y el camino hacia nuestra boda."
     transicion: "fundido"
     tema:
       fondo: "#08070c"
@@ -642,8 +642,8 @@ capitulos:
       pie: "Los dos sentados en un picnic al atardecer"
     episodios:
       - titulo: "La *pregunta*"
-        fecha: "2026-07-24"
-        lugar: "Tres días antes de nuestro 4.º mes"
+        fecha: "fecha-date"
+        lugar: "Tarde al atardecer"
         texto: "Una manta de colores, fruta, dos copas y el cielo de la tarde. Ese día hubo un brindis, un anillo y una respuesta que lo cambió todo."
         fotos:
           - id: "c4-e1-1"
@@ -671,8 +671,8 @@ capitulos:
             aspect: "4/5"
             pie: "Un beso al atardecer"
       - titulo: "Después del *sí*"
-        fecha: "2026-08-21"
-        lugar: "Rumbo a nuestro 5.º mes (agosto 2026)"
+        fecha: "fecha-date"
+        lugar: "Rumbo a nuestro aniversario"
         texto: "La vida siguió, pero distinta: un café con un corazón dibujado y una tarde entre vitrales y plantas."
         fotos:
           - id: "c4-e2-1"
@@ -693,17 +693,17 @@ capitulos:
             tono: "#333230"
             aspect: "4/5"
             pie: "Bajo los colores del vitral"
-      - titulo: "Hoy y cada *27*"
-        fecha: "2026-09-15"
-        lugar: "Rumbo al 27 de marzo de 2027"
-        texto: "Todo lo anterior nos trajo a este momento. Seguimos celebrando cada 27 de mes mientras se acerca el 27 de marzo de 2027."
+      - titulo: "Hoy y *siempre*"
+        fecha: "fecha-date"
+        lugar: "Rumbo a nuestra boda"
+        texto: "Todo lo anterior nos trajo a este momento. Seguimos celebrando cada mes mientras se acerca nuestra boda."
         fotos:
           - id: "c4-e3-1"
             src: "assets/fotos/capitulo-4/e3-1.webp"
             mini: "assets/fotos/capitulo-4/e3-1-s.webp"
             tono: "#251f1f"
             aspect: "4/5"
-            pie: "Una noche de septiembre"
+            pie: "Una noche especial"
 final:
   archivo: "final.html"
   corto: "Álbum"
@@ -711,7 +711,7 @@ final:
   titulo: "Nuestro *álbum*"
   entrada: "Todas las fotografías de esta historia reunidas en una sola pared. Toca cualquiera para verla de cerca."
   transicion: "iris"
-  centroPie: "14 de marzo · La imagen completa"
+  centroPie: "fecha-date · La imagen completa"
   marcos:
     - "papel"
     - "negro"
@@ -727,7 +727,7 @@ final:
   inclinacion: 5
   despedida:
     titulo: "Fin. *Por ahora.*"
-    texto: "Nos conocimos un 14 de marzo de 2026, nos hicimos novios un 27 de marzo de 2026 y nuestro próximo gran capítulo ya tiene fecha."
+    texto: "Nos conocimos en fecha-date, nos hicimos novios en fecha-date y nuestro próximo gran capítulo ya tiene fecha."
 `;
 
   function aplicarTema(tema) {
@@ -745,7 +745,11 @@ final:
     root.HISTORIA = H;
     const caps = H.capitulos || [];
     const mapCaps = {};
-    caps.forEach(c => {
+    caps.forEach((c, idx) => {
+      const numRomano = c.romano || String(c.numero || idx + 1);
+      const primeraPalabra = String(c.titulo || '').replace(/\*/g, '').split(/\s+/).slice(0, 2).join(' ');
+      c.corto = c.corto || `${numRomano} · ${primeraPalabra}`;
+      c.hitoRelacion = c.hitoRelacion || c.hitoCapitulo || '';
       mapCaps[c.id] = c;
     });
     root.CAPITULOS = mapCaps;
@@ -811,10 +815,10 @@ final:
       marca: H.marca || 'Unibody',
       subtituloMarca: H.subtituloMarca || '',
       pareja: H.pareja || { el: 'Mí', ella: 'Ti' },
-      primerEncuentro: (H.fechas && H.fechas.conocernos) || '2026-03-14T16:00:00',
-      fechaNovios: (H.fechas && H.fechas.novios) || '2026-03-27T20:00:00',
-      diaAniversarioMensual: Number((H.fechas && H.fechas.diaAniversarioMensual) || 27),
-      boda: (H.fechas && H.fechas.boda) || '2027-03-27T17:00:00',
+      primerEncuentro: (H.fechas && H.fechas.conocernos) || 'fecha-date',
+      fechaNovios: (H.fechas && H.fechas.novios) || 'fecha-date',
+      diaAniversarioMensual: Number((H.fechas && H.fechas.diaAniversarioMensual) || 1),
+      boda: (H.fechas && H.fechas.boda) || 'fecha-date',
       fechas: H.fechas || {},
       hitos: H.hitos || [],
       paginas
@@ -827,11 +831,7 @@ final:
   }
 
   /* ========================================================================
-     Motor de Fechas y Contadores Automáticos (window.RelojAmor)
-     - Conocernos: 14 de marzo de 2026
-     - Oficialmente novios: 27 de marzo de 2026
-     - Aniversario mensual: Día 27 de cada mes
-     - Boda tentativa: 27 de marzo de 2027 (1 año de novios)
+     Motor de Fechas y Contadores Automáticos (configurados en historia.yaml)
      ======================================================================== */
   const NOMBRES_MES = [
     'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -839,28 +839,34 @@ final:
   ];
 
   function desglosarMs(ms) {
-    const pos = Math.max(0, ms);
+    const val = Number.isFinite(ms) ? Math.max(0, ms) : 0;
     return {
-      totalMs: pos,
-      dias: Math.floor(pos / 86400000),
-      horas: Math.floor((pos % 86400000) / 3600000),
-      minutos: Math.floor((pos % 3600000) / 60000),
-      segundos: Math.floor((pos % 60000) / 1000)
+      totalMs: val,
+      dias: Math.floor(val / 86400000),
+      horas: Math.floor((val % 86400000) / 3600000),
+      minutos: Math.floor((val % 3600000) / 60000),
+      segundos: Math.floor((val % 60000) / 1000)
     };
+  }
+
+  function parseFechaSegura(valor, fallbackDate) {
+    if (!valor || valor === 'fecha-date') return fallbackDate;
+    const d = new Date(valor);
+    return Number.isNaN(d.getTime()) ? fallbackDate : d;
   }
 
   function calcularEstadoFechas(ahoraDate) {
     const ahora = ahoraDate || new Date();
     const F = (root.HISTORIA && root.HISTORIA.fechas) || {};
-    const dtConocernos = new Date(F.conocernos || '2026-03-14T16:00:00');
-    const dtNovios = new Date(F.novios || '2026-03-27T20:00:00');
-    const dtBoda = new Date(F.boda || '2027-03-27T17:00:00');
-    const diaMes = Number(F.diaAniversarioMensual || 27);
+    const dtConocernos = parseFechaSegura(F.conocernos, ahora);
+    const dtNovios = parseFechaSegura(F.novios, ahora);
+    const dtBoda = parseFechaSegura(F.boda, new Date(ahora.getTime() + 86400000 * 365));
+    const diaMes = Number(F.diaAniversarioMensual || dtNovios.getDate() || 1);
 
-    /* 1. Tiempo desde que nos conocimos (14 Mar 2026) */
+    /* 1. Tiempo desde que nos conocimos */
     const desdeConocernos = desglosarMs(ahora.getTime() - dtConocernos.getTime());
 
-    /* 2. Tiempo desde que nos hicimos novios (27 Mar 2026) y meses cumplidos */
+    /* 2. Tiempo desde que nos hicimos novios y meses cumplidos */
     const desdeNovios = desglosarMs(ahora.getTime() - dtNovios.getTime());
 
     let mesesCumplidos =
@@ -871,9 +877,9 @@ final:
     }
     mesesCumplidos = Math.max(0, mesesCumplidos);
 
-    const esHoyVeintisiete = ahora.getDate() === diaMes && ahora >= dtNovios;
+    const esHoyAniversario = ahora.getDate() === diaMes && ahora >= dtNovios;
 
-    /* Próximo 27 del mes */
+    /* Próximo aniversario mensual */
     let proxAnio = ahora.getFullYear();
     let proxMes = ahora.getMonth();
     if (ahora.getDate() >= diaMes) {
@@ -883,12 +889,12 @@ final:
         proxAnio++;
       }
     }
-    const proximo27 = new Date(proxAnio, proxMes, diaMes, 0, 0, 0);
-    const faltaProximo27 = desglosarMs(proximo27.getTime() - ahora.getTime());
+    const proximoAniversario = new Date(proxAnio, proxMes, diaMes, 0, 0, 0);
+    const faltaProximo27 = desglosarMs(proximoAniversario.getTime() - ahora.getTime());
     const numeroProximoMes = mesesCumplidos + 1;
     const etiquetaProximo27 = `${diaMes} de ${NOMBRES_MES[proxMes]} de ${proxAnio}`;
 
-    /* 3. Cuenta regresiva hacia la boda (27 Mar 2027 · 1 año de novios) */
+    /* 3. Cuenta regresiva hacia la boda */
     const faltaBoda = desglosarMs(dtBoda.getTime() - ahora.getTime());
     const totalAnioNovios = Math.max(1, dtBoda.getTime() - dtNovios.getTime());
     const progresoBoda = Math.min(100, Math.max(0, ((ahora.getTime() - dtNovios.getTime()) / totalAnioNovios) * 100));
@@ -896,15 +902,15 @@ final:
     return {
       conocernos: {
         fecha: dtConocernos,
-        etiqueta: F.conocernosEtiqueta || '14 de marzo de 2026',
+        etiqueta: F.conocernosEtiqueta || 'fecha-date',
         ...desdeConocernos
       },
       novios: {
         fecha: dtNovios,
-        etiqueta: F.noviosEtiqueta || '27 de marzo de 2026',
+        etiqueta: F.noviosEtiqueta || 'fecha-date',
         diaAniversarioMensual: diaMes,
         mesesCumplidos,
-        esHoyAniversario: esHoyVeintisiete,
+        esHoyAniversario,
         proximoMesNumero: numeroProximoMes,
         proximoFechaEtiqueta: etiquetaProximo27,
         faltaProximo27,
@@ -912,22 +918,22 @@ final:
       },
       boda: {
         fecha: dtBoda,
-        etiqueta: F.bodaEtiqueta || '27 de marzo de 2027',
+        etiqueta: F.bodaEtiqueta || 'fecha-date',
         progresoPorcentaje: progresoBoda,
         ...faltaBoda
       }
     };
   }
 
-  /* Inicializar de inmediato con el respaldo sincronizado para que los scripts síncronos funcionen al instante */
+  /* Inicializar de inmediato con el respaldo genérico para que los scripts síncronos funcionen al instante */
   const datosIniciales = parseYaml(FALLBACK_YAML);
   inicializarGlobales(datosIniciales);
 
-  /* Si estamos en servidor HTTP/HTTPS, sincronizar en vivo desde `historia.yaml` */
+  /* Si estamos en servidor HTTP/HTTPS, sincronizar en vivo desde `historia.yaml` (local) o `historia.example.yaml` */
   let promesaCarga = Promise.resolve(root.HISTORIA);
   if (typeof window !== 'undefined' && /^https?:$/i.test(window.location.protocol)) {
     promesaCarga = fetch('historia.yaml', { cache: 'no-store' })
-      .then(r => (r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status))))
+      .then(r => (r.ok ? r.text() : fetch('historia.example.yaml', { cache: 'no-store' }).then(r2 => (r2.ok ? r2.text() : Promise.reject(new Error('HTTP ' + r2.status))))))
       .then(txt => {
         const parsed = parseYaml(txt);
         if (parsed && parsed.capitulos && parsed.capitulos.length) {
