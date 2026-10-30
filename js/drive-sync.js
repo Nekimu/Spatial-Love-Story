@@ -491,6 +491,14 @@
         const rom = aRomano(num);
         const paleta = PALETAS_DINAMICAS[(num - 1) % PALETAS_DINAMICAS.length];
         const tituloNuevo = datosCap.tituloExtra || `Capítulo ${rom}`;
+        const portadaRespaldo = datosCap.portada || {
+          id: `c${num}-portada`,
+          src: `assets/fotos/capitulo-${num}/portada.webp`,
+          mini: `assets/fotos/capitulo-${num}/portada-s.webp`,
+          tono: '#1e1620',
+          aspect: '16/10',
+          pie: `${tituloNuevo} · Sube tus fotos a la carpeta capitulo-${num} en Google Drive`
+        };
         cap = {
           id: capId,
           numero: num,
@@ -503,7 +511,7 @@
           resumen: datosCap.descripcionCarpeta || 'Recuerdos agregados directamente desde nuestro álbum en Google Drive.',
           transicion: 'fundido',
           tema: paleta,
-          portada: datosCap.portada || null,
+          portada: portadaRespaldo,
           episodios: []
         };
         H.capitulos.push(cap);
@@ -613,12 +621,14 @@
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
           const edadMs = Date.now() - (cached.timestamp || 0);
-          if (edadMs < cfg.cacheMinutos * 60000 && cached.paquete) {
+          if ( edadMs < cfg.cacheMinutos * 60000 && cached.paquete) {
             const count = aplicarDatosDriveEnHistoria(cached.paquete, cfg.modo);
+            const numCaps = (cached.paquete.epilogo ? 1 : 0) + Object.keys(cached.paquete.capitulos || {}).length;
             estadoSync = {
               estado: 'conectado',
-              mensaje: `Conectado a Google Drive (caché) · ${count} fotos sincronizadas`,
-              fotosSincronizadas: count
+              mensaje: `Conectado a Google Drive (caché) · ${numCaps} carpetas detectadas · ${count} fotos sincronizadas`,
+              fotosSincronizadas: count,
+              carpetasDetectadas: numCaps
             };
             actualizarInsigniaDriveUI();
             return cached.paquete;
@@ -683,6 +693,7 @@
       }
 
       const total = aplicarDatosDriveEnHistoria(paquete, cfg.modo);
+      const numCarpetas = (paquete.epilogo ? 1 : 0) + Object.keys(paquete.capitulos || {}).length;
 
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify({
@@ -693,8 +704,11 @@
 
       estadoSync = {
         estado: 'conectado',
-        mensaje: `Conectado a Google Drive API · ${total} fotos sincronizadas`,
-        fotosSincronizadas: total
+        mensaje: numCarpetas > 0 && total === 0
+          ? `Conectado a Google Drive API · ${numCarpetas} carpetas listas (epilogo y capítulos) · Sube tus fotos adentro para visualizarlas`
+          : `Conectado a Google Drive API · ${numCarpetas} carpetas · ${total} fotos sincronizadas`,
+        fotosSincronizadas: total,
+        carpetasDetectadas: numCarpetas
       };
       actualizarInsigniaDriveUI();
       return paquete;
@@ -814,7 +828,11 @@
       const label = btn.querySelector('.drive-lbl');
       if (label) {
         if (estadoSync.estado === 'conectado') {
-          label.textContent = `Google Drive (${estadoSync.fotosSincronizadas} fotos)`;
+          if (estadoSync.fotosSincronizadas > 0) {
+            label.textContent = `Google Drive (${estadoSync.fotosSincronizadas} fotos)`;
+          } else {
+            label.textContent = `Google Drive (${estadoSync.carpetasDetectadas || 0} carpetas listas)`;
+          }
         } else if (estadoSync.estado === 'sincronizando') {
           label.textContent = 'Sincronizando Drive…';
         } else if (estadoSync.estado === 'error') {
@@ -854,7 +872,7 @@
           </div>
           <div class="drive-field">
             <label for="inp-drive-key">API Key Pública (Opcional · GOOGLE_DRIVE_API_KEY para lectura sin login)</label>
-            <input type="password" id="inp-drive-key" placeholder="AIzaSy..." autocomplete="off">
+            <input type="password" id="inp-drive-key" placeholder="Tu clave de API de Google Cloud" autocomplete="off">
           </div>
           <div class="drive-field">
             <label for="inp-drive-mode">Modo de visualización</label>

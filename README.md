@@ -124,8 +124,8 @@ Las fotografías no se almacenan en el repositorio: se sirven dinámicamente des
 Copia [`.env.example`](.env.example) a `.env` y agrega tu **API Key** (con *Google Drive API* habilitada en Google Cloud / Google AI Studio) y el enlace de tu carpeta:
 
 ```dotenv
-GOOGLE_DRIVE_API_KEY=AIzaSy_TU_API_KEY
-GOOGLE_DRIVE_FOLDER_URL=https://drive.google.com/drive/folders/TU_FOLDER_ID
+GOOGLE_DRIVE_API_KEY=<TU_API_KEY>
+GOOGLE_DRIVE_FOLDER_URL=https://drive.google.com/drive/folders/<TU_FOLDER_ID>
 GOOGLE_DRIVE_MODE=reemplazar
 GOOGLE_DRIVE_CACHE_MINUTES=5
 ```
